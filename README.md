@@ -1,20 +1,12 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# GuluAI C++ 可视化互动游戏化 AI 教学系统
 
-# Run and deploy your AI Studio app
+课堂实验 100% 通过！内部评审极好！  
+**Demo 1.0 已永久冻结在 `main` 分支 + `v1.0.0` 标签，永不丢失！**
 
-This contains everything you need to run your app locally.
+### 一键在线玩（无需安装任何东西）
+https://guluaining.github.io/guluaicpp-app/
 
-View your app in AI Studio: https://ai.studio/apps/drive/1UQdaQwr4_lpZqG-u2P0PaKrZC0GedlnG
+### 一键本地运行（推荐，最快最稳）
+```bash
+docker run -p 8080:80 guluaining/guluaicpp-demo:latest
 
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
