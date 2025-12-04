@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>附件七：当前应用架构详解与新成员入职指南</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 离线可用：Tailwind & Mermaid 均使用 CDN，若需纯离线可下载到本地 -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  body { background:#fafafa; color:#222; }
+  pre { background:#f6f8fa; padding:1rem; border-radius:.5rem; overflow:auto; }
+  code { background:#eef; padding:2px 4px; border-radius:3px; font-size:0.9em; }
+  h1,h2,h3 { color:#0ea5e9; }
+</style>
+<base target="_blank">
+</head>
+<body class="max-w-4xl mx-auto p-6">
+
+<header class="mb-8">
+  <h1 class="text-3xl font-bold">附件七：当前应用架构详解与新成员入职指南</h1>
+  <p class="text-sm text-gray-600 mt-2">
+    <strong>Attachment 7: Current App Architecture & Developer Onboarding Guide</strong><br>
+    版本：v1.0.0 (MVP Stable)<br>
+    适用对象：新入职全栈工程师、前端工程师、AI 辅助开发代理
+  </p>
+</header>
+
+<main>
+
+<section>
+  <h2 class="text-2xl font-semibold mt-8 mb-3">1. 系统概览 (High-Level Overview)</h2>
+  <p>GuluCoding 是一个基于 <strong>React (Vite 模式)</strong> + <strong>Tailwind CSS</strong> 的单页应用 (SPA)。它目前没有后端数据库，所有教学内容、逻辑和状态都驻留在前端内存中。</p>
+
+  <h3 class="text-xl font-semibold mt-4 mb-2">核心特征</h3>
+  <ul class="list-disc ml-6 space-y-1">
+    <li><strong>无构建依赖 (No-Build Dev)：</strong>使用 <code>importmap</code> 和 CDN 直接加载 React 和 Tailwind，便于快速原型开发。</li>
+    <li><strong>数据驱动 (Data-Driven Content)：</strong>所有的教学关卡定义在 <code>problemData.ts</code> 中。</li>
+    <li><strong>双轨制视图 (Dual-View Architecture)：</strong>
+      <ul class="list-circle ml-6">
+        <li><strong>Game Mode (GameCanvas)：</strong>沉浸式、隐喻化（盒子/贴纸）的交互教学。</li>
+        <li><strong>Pro Mode (Visualizer)：</strong>传统的内存可视化、伪代码和流程图。</li>
+      </ul>
+    </li>
+    <li><strong>AI 集成：</strong>通过 <code>GeminiService</code> 直接调用 Google Gemini API 进行实时代码解释。</li>
+  </ul>
+</section>
+
+<section>
+  <h2 class="text-2xl font-semibold mt-8 mb-3">2. 完整文件目录结构 (File Tree)</h2>
+  <pre><code>/
+├── index.html                  # [Entry] 应用入口，包含 Import Map 和 Tailwind CDN
+├── index.tsx                   # [Entry] React 挂载点
+├── App.tsx                     # [Controller] 主布局、路由逻辑、全局状态管理
+├── types.ts                    # [Model] TypeScript 类型定义 (ProblemDef, ESLData 等)
+├── metadata.json               # [Config] 应用元数据 (权限声明)
+├── problemData.ts              # [Database] 静态关卡数据库 (ASSIGNMENT, SWAP, FIND_MAX, SORT_3)
+│
+├── services/
+│   └── geminiService.ts        # [Service] AI API 封装 (Prompt Engineering)
+│
+├── components/                 # [View] UI 组件库
+│   ├── GameCanvas.tsx          # [Core] 游戏化教学引擎 (含拖拽逻辑、状态机、iPad 兼容)
+│   ├── Visualizer.tsx          # [Core] 专业模式可视化 (SVG 流程图, 伪代码, 内存视图)
+│   ├── CodeDisplay.tsx         # [UI] 代码编辑器视图 (含交互式 Token 点击解释)
+│   ├── VariableBox.tsx         # [UI] 原子组件：可视化变量盒子
+│   ├── ESLPanel.tsx            # [Module] 英语学习模块 (翻转卡片, TTS, 4阶段打字游戏)
+│   └── IntroModal.tsx          # [Module] 演示文稿系统 (PainPoint, Roadmap, Team 动画)
+│
+└── docs/                       # [Documentation] 项目文档库
+    ├── ATTACHMENT_1_MVP_STATUS_AND_PROPOSAL.md        # MVP 现状与产品立项书
+    ├── ATTACHMENT_2_TECH_STACK_ANALYSIS.md            # 技术选型分析报告
+    ├── ATTACHMENT_3_GLOBAL_DEPLOYMENT_STRATEGY.md     # 全球部署与合规策略
+    ├── ATTACHMENT_4_EDU_OS_STRATEGY.md                # Edu-OS 生态战略规划
+    ├── ATTACHMENT_5_ARCHITECTURE_AND_REFACTORING.md   # 架构重构白皮书 (工厂模式)
+    ├── ATTACHMENT_6_REFACTORING_ACTION_PLAN.md        # MVP of MVP 重构行动指南
+    └── ATTACHMENT_7_CURRENT_APP_ARCHITECTURE.md       # (本文档) 架构详解</code></pre>
+</section>
+
+<section>
+  <h2 class="text-2xl font-semibold mt-8 mb-3">3. 核心模块代码详解 (Module Deep Dive)</h2>
+
+  <h3 class="text-xl font-semibold mt-4 mb-2">3.1 App.tsx (中央指挥官)</h3>
+  <ul class="list-disc ml-6 space-y-1">
+    <li><strong>职责：</strong>路由分发、侧边栏导航、全局状态持有。</li>
+    <li><strong>核心状态：</strong>
+      <ul class="list-circle ml-6">
+        <li><code>activeProblemId</code>：当前激活的算法 ID (如 <code>SWAP</code>)。若为 <code>null</code>，渲染 Dashboard。</li>
+        <li><code>step</code>：全局步数指针 (0 ~ maxSteps)。驱动代码高亮和动画进度。</li>
+        <li><code>language</code>：全局语言 (<code>'en'</code> | <code>'cn'</code>)。</li>
+        <li><code>viewMode</code>：视图模式 (<code>'GAME'</code> | <code>'PRO'</code> | <code>'ESL'</code>)。</li>
+      </ul>
+    </li>
+    <li><strong>关键交互：</strong>
+      <ul class="list-circle ml-6">
+        <li>Sidebar Accordion：实现了折叠式导航，在问题被选中时展开 Presets (预设输入) 和 Custom Input。</li>
+        <li>Presentation Integration：处理 "Road to Success" 演示文稿的打开逻辑 (<code>IntroModal</code>)。</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h3 class="text-xl font-semibold mt-4 mb-2">3.2 problemData.ts (静态内容库)</h3>
+  <ul class="list-disc ml-6 space-y-1">
+    <li><strong>数据结构：</strong>导出 <code>PROBLEMS</code> 对象，Key 为 <code>ProblemId</code>。</li>
+    <li><strong>Schema 重点 (<code>ProblemDef</code>)：</strong>
+      <ul class="list-circle ml-6">
+        <li><code>initialValues</code>：定义变量初始状态 (如 <code>{a:10, b:20}</code>)。</li>
+        <li><code>code</code> / <code>fullCode</code>：分别用于片段模式和完整代码模式的源码。</li>
+        <li><code>esl</code>：包含单词列表 (<code>words</code>) 和测验题 (<code>questions</code>)。</li>
+        <li><code>pseudocode</code>：用于 Pro 模式的伪代码步骤定义。</li>
+        <li><code>flowchart</code>：用于 Pro 模式的 SVG 节点和连线定义。</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h3 class="text-xl font-semibold mt-4 mb-2">3.3 components/GameCanvas.tsx (核心游戏引擎)</h3>
+  <ul class="list-disc ml-6 space-y-1">
+    <li><strong>现状：</strong>单体巨型组件 (Monolithic)。包含所有关卡的渲染逻辑。</li>
+    <li><strong>输入处理：</strong>
+      <ul class="list-circle ml-6">
+        <li>实现了统一的 <code>startDrag</code> / <code>handleMove</code> / <code>endDrag</code> 逻辑。</li>
+        <li><strong>关键兼容性：</strong>同时监听 <code>MouseEvent</code> 和 <code>TouchEvent</code>，确保 iPad/Android 平板可拖拽。</li>
+      </ul>
+    </li>
+    <li><strong>状态机 (State Machine)：</strong>
+      <ul class="list-circle ml-6">
+        <li>内部维护 <code>phase</code> 状态 (如 <code>DECLARE</code>, <code>INIT_A</code>, <code>COMPLETE</code>)。</li>
+        <li><code>useEffect</code> 监听 <code>phase</code> 变化，并调用 <code>onStepChange</code> 同步外部 <code>step</code>。</li>
+      </ul>
+    </li>
+    <li><strong>关卡渲染器：</strong>
+      <ul class="list-circle ml-6">
+        <li><code>renderAssignmentGame</code>：赋值逻辑 (拖拽数值 -&gt; 变量, 变量 -&gt; 变量)。</li>
+        <li><code>renderSwapGame</code>：交换逻辑 (引入 <code>temp</code> 变量)。</li>
+        <li><code>renderFindMaxGame</code>：找最大值 (多步比较逻辑)。</li>
+        <li><code>renderSortGame</code>：冒泡排序逻辑 (含交换按钮)。</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h3 class="text-xl font-semibold mt-4 mb-2">3.4 components/Visualizer.tsx (专业可视化)</h3>
+  <ul class="list-disc ml-6 space-y-1">
+    <li><strong>渲染模式：</strong>支持 Tabs 切换 (<code>Visual</code>, <code>Pseudocode</code>, <code>Flowchart</code>)。</li>
+    <li><strong>Visual Tab：</strong>复用 <code>VariableBox</code> 组件，但以更严谨的内存布局展示 (<code>Address</code>, <code>Value</code>)。使用 <code>FlyingValue</code> 组件展示数据流动的轨迹动画。</li>
+    <li><strong>Flowchart Tab：</strong>基于 <code>problemData</code> 中的节点数据，使用 SVG 动态绘制流程图，并高亮当前步骤。</li>
+  </ul>
+
+  <h3 class="text-xl font-semibold mt-4 mb-2">3.5 components/ESLPanel.tsx (英语学习系统)</h3>
+  <ul class="list-disc ml-6 space-y-1">
+    <li><strong>独立性：</strong>一个相对独立的子系统，包含完整的游戏循环。</li>
+    <li><strong>Sound Engine：</strong>使用 Web Audio API 原生生成音效 (<code>Ding</code>, <code>Buzz</code>, <code>Applause</code>)，无需外部 MP3 文件。</li>
+    <li><strong>AdvancedTypingGame：</strong>实现了复杂的 4 阶段学习法 (<code>Imprint</code> -&gt; <code>Recognition</code> -&gt; <code>Recall</code> -&gt; <code>Dictation</code>)。</li>
+  </ul>
+
+  <h3 class="text-xl font-semibold mt-4 mb-2">3.6 components/IntroModal.tsx (演示引擎)</h3>
+  <ul class="list-disc ml-6 space-y-1">
+    <li><strong>架构：</strong>基于幻灯片 (<code>Slide</code>) 数组的渲染器。</li>
+    <li><strong>视觉风格：</strong>支持 <code>FUN</code> (趣味) 和 <code>PRO</code> (专业) 两种 CSS 皮肤切换。</li>
+    <li><strong>复杂动画：</strong>包含 <code>PainPointAnimation</code> (笑脸变哭脸)、<code>RoadmapAnimation</code> (7步路径图)、<code>TeamAnimation</code>。</li>
+  </ul>
+</section>
+
+<section id="data-flow">
+  <h2 class="text-2xl font-semibold mt-8 mb-3">4. 数据流向图 (Data Flow Architecture)</h2>
+
+  <p class="mb-4">
+    下图展示了从用户拖拽/点击开始，到本地状态校验、阶段推进、全局状态广播、最终触发各视图更新的完整数据闭环。
+    任何交互均遵循“<strong>局部验证 → 局部状态 → 回调上行 → 全局广播 → 下游消费</strong>”的单向数据流模式。
+  </p>
+
+  <!-- Mermaid 图 -->
+  <div class="mermaid">
+    graph TD
+        UserInput[用户交互 (Drag/Click)] --> GameCanvas
+
+        subgraph "GameCanvas (Local State)"
+            GameCanvas --> |Validation| LogicCheck{操作正确?}
+            LogicCheck -- Yes --> UpdateLocal[更新 localValues]
+            UpdateLocal --> AdvancePhase[更新 Phase]
+        end
+
+        AdvancePhase --> |Callback| App_onStepChange
+
+        subgraph "App.tsx (Global State)"
+            App_onStepChange --> SetStep[更新 step]
+            SetStep --> Broadcast[广播状态]
+        end
+
+        Broadcast --> |Props| CodeDisplay[高亮代码行]
+        Broadcast --> |Props| Visualizer[同步专业视图]
+        Broadcast --> |Context| GeminiService[AI 获取最新上下文]
+  </div>
+
+  <h3 class="text-lg font-semibold mt-6 mb-2">关键说明</h3>
+  <ul class="list-disc ml-6 space-y-1 text-sm">
+    <li><strong>局部验证：</strong>GameCanvas 内部先校验操作合法性，失败则播放错误提示并<strong>不</strong>触发回调，保证全局状态始终有效。</li>
+    <li><strong>阶段推进：</strong>只有验证通过才会进入下一步 <code>phase</code>，并一次性把 <code>localValues</code>、<code>phase</code>、<code>step</code> 通过回调传回 App.tsx。</li>
+    <li><strong>全局唯一信源：</strong>App.tsx 的 <code>step</code> 是<strong>唯一真实来源</strong>，所有下游组件（CodeDisplay、Visualizer、ESLPanel 等）均通过 props/context 读取，杜绝双向数据流。</li>
+    <li><strong>AI 上下文同步：</strong>广播时会把当前 <code>problemId</code> + <code>step</code> + <code>localValues</code> 写入 GeminiService 的上下文，保证 AI 解释始终与最新状态对齐。</li>
+    <li><strong>性能考虑：</strong>Broadcast 仅携带原始值与索引，不传递完整 DOM，减少 React re-render 范围；各子组件使用 <code>React.memo</code> 或 <code>useMemo</code> 做浅比较优化。</li>
+  </ul>
+</section>
+
+<section>
+  <h2 class="text-2xl font-semibold mt-8 mb-3">5. 开发注意事项 (Dev Guidelines)</h2>
+  <ul class="list-disc ml-6 space-y-1">
+    <li><strong>移动端优先：</strong>任何拖拽交互 <strong>必须</strong> 使用 PointerEvents 或同时绑定 Mouse + Touch 事件。参考 <code>GameCanvas.tsx</code> 的实现模式。</li>
+    <li><strong>多语言硬性要求：</strong>所有 UI 字符串 <strong>禁止硬编码</strong>。必须使用 <code>language === 'cn' ? ... : ...</code> 或字典查找。</li>
+    <li><strong>零构建依赖：</strong>本项目目前没有 <code>package.json</code> 的 <code>dependencies</code> (依赖通过 CDN 注入)。添加新库时请更新 <code>index.html</code> 的 importmap。</li>
+    <li><strong>AI 调用：</strong>不要直接在组件里调用 <code>fetch</code>。必须通过 <code>services/geminiService.ts</code>，以便未来做后端代理迁移。</li>
+  </ul>
+</section>
+
+<section>
+  <h2 class="text-2xl font-semibold mt-8 mb-3">6. 待办重构任务 (Upcoming Refactoring)</h2>
+  <ul class="list-disc ml-6 space-y-1">
+    <li><strong>目标：</strong>实施 "Factory Mode" (内容工厂模式)。</li>
+    <li><strong>Schema 定义：</strong>将 <code>problemData.ts</code> 中的逻辑抽象为通用的 JSON 指令。</li>
+    <li><strong>引擎通用化：</strong>重写 <code>GameCanvas.tsx</code>，使其不再包含 <code>if (id === 'SWAP')</code>，而是根据 JSON 指令渲染。</li>
+    <li><strong>数据库接入：</strong>准备迁移至 Next.js + Supabase (参考附件 5)。</li>
+  </ul>
+</section>
+
+</main>
+
+<footer class="mt-12 text-sm text-gray-500 text-center">
+  End of Onboarding Guide
+</footer>
+
+<script>
+  // 初始化 Mermaid
+  mermaid.initialize({ startOnLoad: true, theme: 'default' });
+</script>
+</body>
+</html>
