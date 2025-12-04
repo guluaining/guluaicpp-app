@@ -1,0 +1,40 @@
+#!/bin/bash
+set -e
+echo "=================================================="
+echo "   GuluCoding 项目智能同步工具（2025版）"
+echo "=================================================="
+echo
+git fetch origin main --quiet
+echo "GitHub 上有，但你本地没有的文件："
+git log --oneline main..origin/main --pretty="  → %s" -- docs/ || echo "  （无）"
+git diff --name-only main origin/main | sed 's/^/  + /' || echo "  （无）"
+echo
+echo "你本地改动或新增的文件（即将提交）："
+git status --short | sed 's/^/  /' || echo "  （无）"
+echo
+read -p "是否立即【双向同步】（把 GitHub 的新文件拉下来 + 把你本地的改动推上去）？[Y/n] " confirm
+if [[ ! "$confirm" =~ ^[Yy]$ ]] && [[ "$confirm" != "" ]]; then
+  echo "已取消，啥也没干"; exit 0; fi
+echo
+echo "请输入本次变更说明（支持多行，回车后直接写，写完空行+回车 或 Ctrl+D 结束）："
+messages=$(cat)
+commit_msg="${messages:-日常更新}"
+echo
+echo "开始同步，请稍等..."
+git pull origin main --allow-unrelated-histories --quiet
+git add .
+if git diff --cached --quiet; then
+  echo "本地没有任何改动，只做了拉取"
+else
+  git commit -m "$commit_msg" --quiet
+  echo "已提交本地改动"
+fi
+git push origin main --force-with-lease --quiet
+echo
+echo "同步成功！当前仓库状态："
+echo "=================================================="
+git log -1 --pretty="  最新提交：%h %s (%cr)"
+echo "  同步时间：$(date '+%Y-%m-%d %H:%M')"
+echo "  仓库地址：$(git remote get-url origin)"
+echo "=================================================="
+echo "大功告成！去喝杯咖啡吧"
